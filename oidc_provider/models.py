@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import base64
 import binascii
+from enum import Enum
 from hashlib import md5, sha256
 import json
 
@@ -10,9 +11,29 @@ from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
 
+class ClientAuthMethods(Enum):
+    """Client Auth Methods
+
+    https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+    """
+    secret_basic = 'client_secret_basic'
+    secret_post = 'client_secret_post'
+    secret_jwt = 'client_secret_jwt'
+    private_jwt = 'private_key_jwt'
+    none = 'none'
+
+
 CLIENT_TYPE_CHOICES = [
     ('confidential', 'Confidential'),
     ('public', 'Public'),
+]
+
+CLIENT_AUTH_METHOD_CHOICES = [
+    (ClientAuthMethods.secret_basic.value, 'Client Secret Basic'),
+    (ClientAuthMethods.secret_post.value, 'Client Secret Post'),
+    (ClientAuthMethods.secret_jwt.value, 'Client Secret JWT'),
+    (ClientAuthMethods.private_jwt.value, 'Private Key JWT'),
+    (ClientAuthMethods.none, 'None'),
 ]
 
 RESPONSE_TYPE_CHOICES = [
@@ -98,6 +119,18 @@ class Client(models.Model):
         default=True,
         verbose_name=_('Require Consent?'),
         help_text=_('If disabled, the Server will NEVER ask the user for consent.'))
+    auth_type = models.CharField(
+        blank=True,
+        max_length=30,
+        default=ClientAuthMethods.secret_basic,
+        choices=CLIENT_AUTH_METHOD_CHOICES,
+        verbose_name=_(u'Client Auth Type'),
+        help_text=_(''))
+    public_key = models.TextField(
+        blank=True,
+        default='',
+        verbose_name=_(u'Public Key'),
+        help_text=_('Client public key, used for decrypting JWTs'))
     _redirect_uris = models.TextField(
         default='', verbose_name=_(u'Redirect URIs'),
         help_text=_(u'Enter each URI on a new line.'))

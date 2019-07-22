@@ -53,7 +53,7 @@ class ClientAdmin(admin.ModelAdmin):
         [_(u''), {
             'fields': (
                 'name', 'owner', 'client_type', 'response_types', '_redirect_uris', 'jwt_alg',
-                'require_consent', 'reuse_consent'),
+                'require_consent', 'reuse_consent', 'auth_type', 'public_key'),
         }],
         [_(u'Credentials'), {
             'fields': ('client_id', 'client_secret', '_scope'),
