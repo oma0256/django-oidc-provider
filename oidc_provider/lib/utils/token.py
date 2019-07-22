@@ -1,14 +1,16 @@
 from datetime import timedelta
+import logging
 import time
 import uuid
 
 from Cryptodome.PublicKey.RSA import importKey
 from django.utils import dateformat, timezone
 from jwkest.jwk import RSAKey as jwk_RSAKey
-from jwkest.jwk import SYMKey
+from jwkest.jwk import SYMKey, load_jwks_from_url
 from jwkest.jws import JWS
 from jwkest.jwt import JWT
 
+from oidc_provider.lib.errors import TokenError
 from oidc_provider.lib.utils.common import get_issuer, run_processing_hook
 from oidc_provider.lib.claims import StandardScopeClaims
 from oidc_provider.models import (
@@ -17,6 +19,8 @@ from oidc_provider.models import (
     Token,
 )
 from oidc_provider import settings
+
+logger = logging.getLogger(__name__)
 
 
 def create_id_token(token, user, aud, nonce='', at_hash='', request=None, scope=None):
@@ -86,6 +90,55 @@ def decode_id_token(token, client):
     """
     keys = get_client_alg_keys(client)
     return JWS().verify_compact(token, keys=keys)
+
+
+def validate_private_jwk(client_assertion, client):
+    """Validate JWT for a private_key_jwk according to OpenID Core, Section 9
+
+    https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+    """
+    if client.public_key_url:
+        pub_keys = load_jwks_from_url(client.public_key_url)
+    else:
+        pub_keys = [jwk_RSAKey(key=importKey(client.public_key))]
+        pub_keys[0].add_kid()
+    if not pub_keys:
+        raise TokenError("No public key available for client: %s", client)
+    
+    # Signature checked here
+    res = JWS().verify_compact(client_assertion, keys=pub_keys)
+    logger.debug("JWT Payload: %s", res)
+
+    # Validation Requirements
+    # https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12#section-3
+    # 3.1 - iss
+    if not res.get('iss', ''):
+        raise TokenError('JWT missing "iss" field: %s', res)
+    
+    # 3.2 - sub must == client_id. Checked because we already have a client
+    # 3.3 - aud
+    aud = res.get('aud', '')
+    site = settings.SITE_URL if settings.SITE_URL else 'http://{}'.format()
+    # TODO: Figure out better way to get current domain for comparison?
+    if not aud.startswith(site):
+        raise TokenError(
+            'JWT "aud" field: %s does not start with %s',
+            aud, settings.SITE_URL
+        )
+    exp = res.get('exp')
+    # 3.4 - exp
+    # TODO: Convert exp to real datetime
+    # make sure not expired
+    
+
+
+def validate_secret_jwk(client_assertion, client, secret):
+    """Validate JWT for a client_secret_jwk according to OpenID Core, Section 9
+
+    https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+    """
+    # TODO: Finish This
+    raise NotImplementedError
 
 
 def client_id_from_id_token(id_token):

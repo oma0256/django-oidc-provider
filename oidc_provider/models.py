@@ -131,6 +131,11 @@ class Client(models.Model):
         default='',
         verbose_name=_(u'Public Key'),
         help_text=_('Client public key, used for decrypting JWTs'))
+    public_key_url = models.URLField(
+        blank=True,
+        default='',
+        verbose_name='Public Keyset URL',
+        help_text=_('URL of public keyset if available'))
     _redirect_uris = models.TextField(
         default='', verbose_name=_(u'Redirect URIs'),
         help_text=_(u'Enter each URI on a new line.'))

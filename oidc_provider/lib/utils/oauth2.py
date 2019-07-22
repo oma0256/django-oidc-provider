@@ -4,9 +4,10 @@ import re
 
 from django.http import HttpResponse
 
+from jwkest.jwt import JWT
+
 from oidc_provider.lib.errors import BearerTokenError
 from oidc_provider.models import Token
-
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +52,15 @@ def extract_client_auth(request):
         client_secret = request.POST.get('client_secret', '')
 
     return (client_id, client_secret)
+
+
+def extract_jwt_auth(request):
+    """Validates JWT and extracts client_id"""
+    token_str = request.POST.get('client_assertion')
+    token = JWT().unpack(token_str)
+    client_id = token.payload().get('sub')
+    logger.debug("Client found in jwt: %s", client_id)
+    return client_id
 
 
 def protected_resource_view(scopes=None):
