@@ -54,12 +54,17 @@ def extract_client_auth(request):
     return (client_id, client_secret)
 
 
-def extract_jwt_auth(request):
-    """Validates JWT and extracts client_id"""
-    token_str = request.POST.get('client_assertion')
-    token = JWT().unpack(token_str)
-    client_id = token.payload().get('sub')
-    logger.debug("Client found in jwt: %s", client_id)
+def extract_jwt_client_id(request):
+    """Extracts client_id from unvalidated JWT payload
+
+    Have not validated signature at this point, but will do that later"""
+    try:
+        token_str = request.POST.get('client_assertion')
+        token = JWT().unpack(token_str)
+        client_id = token.payload().get('sub', '')
+    except Exception:
+        client_id = ''
+
     return client_id
 
 

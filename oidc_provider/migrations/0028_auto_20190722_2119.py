@@ -19,6 +19,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='client',
             name='auth_type',
-            field=models.CharField(blank=True, choices=[('client_secret_basic', 'Client Secret Basic'), ('client_secret_post', 'Client Secret Post'), ('client_secret_jwt', 'Client Secret JWT'), ('private_key_jwt', 'Private Key JWT'), (oidc_provider.models.ClientAuthMethods('none'), 'None')], default=oidc_provider.models.ClientAuthMethods('client_secret_basic'), help_text='', max_length=30, verbose_name='Client Auth Type'),
+            field=models.CharField(blank=True, choices=[('client_secret_basic', 'Client Secret Basic'), ('client_secret_post', 'Client Secret Post'), ('client_secret_jwt', 'Client Secret JWT'), ('private_key_jwt', 'Private Key JWT'), (oidc_provider.models.AuthMethods('none'), 'None')], default=oidc_provider.models.AuthMethods('client_secret_basic'), help_text='', max_length=30, verbose_name='Client Auth Type'),
         ),
     ]

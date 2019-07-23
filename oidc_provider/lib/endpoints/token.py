@@ -11,13 +11,13 @@ from oidc_provider.lib.errors import (
     TokenError,
     UserAuthError,
 )
-from oidc_provider.lib.utils.oauth2 import extract_client_auth, extract_jwt_auth
+from oidc_provider.lib.utils.oauth2 import extract_client_auth, extract_jwt_client_id
 from oidc_provider.lib.utils.token import (
     create_id_token,
     create_token,
     encode_id_token,
-    validate_private_jwk,
-    validate_secret_jwk
+    validate_private_jwt,
+    validate_secret_jwt
 )
 from oidc_provider.models import (
     Client,
@@ -39,13 +39,9 @@ class TokenEndpoint(object):
         self.user = None
         self._extract_params()
         logger.info(pformat(request.POST))
-    
+
     def _extract_params(self):
         client_id, client_secret = extract_client_auth(self.request)
-        # Check for JWT authentication
-        # if not client_id and not client_secret:
-        if not client_id and not client_secret:
-            client_id = extract_jwt_auth(self.request)
 
         self.params['client_id'] = client_id
         self.params['client_secret'] = client_secret
@@ -65,22 +61,38 @@ class TokenEndpoint(object):
         self.params['username'] = self.request.POST.get('username', '')
         self.params['password'] = self.request.POST.get('password', '')
 
+        # Client Assertion
+        if self.params['client_assertion_type'] == JWT_ASSERTION_TYPE:
+            self.params['client_id'] = extract_jwt_client_id(self.request)
+
+    def _validate_jwt_assertion(self):
+        """Perform validation associated with JWT assertion"""
+        if self.params['client_assertion_type'] != JWT_ASSERTION_TYPE:
+            raise TokenError('invalid_request')
+
+        # match optional client_id if provided
+        client_id = self.request.POST.get('client_id')
+        if client_id and client_id != self.params['client_id']:
+            raise TokenError('invalid_request')
+
+        # validate payload
+        if not self.params['client_secret']:
+            validate_private_jwt(self.params['client_assertion'], self.client)
+        else:
+            validate_secret_jwt(
+                self.params['client_assertion'], self.client,
+                self.params['client_secret'])
+
     def validate_params(self):
         try:
             self.client = Client.objects.get(client_id=self.params['client_id'])
         except Client.DoesNotExist:
             logger.debug('[Token] Client does not exist: %s', self.params['client_id'])
             raise TokenError('invalid_client')
-        
-        # JWT Verification
-        if self.params['client_assertion_type'] == JWT_ASSERTION_TYPE:
-            if not self.params['client_secret']:
-                validate_private_jwk(self.params['client_assertion'], self.client)
-            else:
-                validate_secret_jwk(
-                    self.params['client_assertion'], self.client, 
-                    self.params['client_secret'])
-        
+
+        if self.params['client_assertion_type'] and self.params['client_assertion']:
+            self._validate_jwt_assertion()
+
         if self.client.client_type == 'confidential':
             # Don't need client_secret if using private_key_jwt
             if self.params['client_assertion_type'] == JWT_ASSERTION_TYPE and \
@@ -161,7 +173,7 @@ class TokenEndpoint(object):
         else:
             logger.debug('[Token] Invalid grant type: %s', self.params['grant_type'])
             raise TokenError('unsupported_grant_type')
-    
+
     def create_response_dic(self):
         if self.params['grant_type'] == 'authorization_code':
             return self.create_code_response_dic()

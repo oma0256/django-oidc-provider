@@ -1,4 +1,4 @@
-from datetime import timedelta
+from datetime import timedelta, datetime
 import logging
 import time
 import uuid
@@ -7,7 +7,12 @@ from Cryptodome.PublicKey.RSA import importKey
 from django.utils import dateformat, timezone
 from jwkest.jwk import RSAKey as jwk_RSAKey
 from jwkest.jwk import SYMKey, load_jwks_from_url
-from jwkest.jws import JWS
+from jwkest.jws import (
+    JWS,
+    BadSignature,
+    NoSuitableSigningKeys
+)
+
 from jwkest.jwt import JWT
 
 from oidc_provider.lib.errors import TokenError
@@ -92,53 +97,83 @@ def decode_id_token(token, client):
     return JWS().verify_compact(token, keys=keys)
 
 
-def validate_private_jwk(client_assertion, client):
-    """Validate JWT for a private_key_jwk according to OpenID Core, Section 9
+def validate_private_jwt(client_assertion, client):
+    """Validate JWT signature and payload
 
     https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
     """
-    if client.public_key_url:
-        pub_keys = load_jwks_from_url(client.public_key_url)
-    else:
-        pub_keys = [jwk_RSAKey(key=importKey(client.public_key))]
-        pub_keys[0].add_kid()
-    if not pub_keys:
-        raise TokenError("No public key available for client: %s", client)
-    
-    # Signature checked here
-    res = JWS().verify_compact(client_assertion, keys=pub_keys)
-    logger.debug("JWT Payload: %s", res)
+    fetch = False
+    cur_key = client.public_key
+    payload = None
 
-    # Validation Requirements
+    while True:
+        if cur_key and not fetch:
+            pub_keys = [jwk_RSAKey(key=importKey(cur_key))]
+            pub_keys[0].add_kid()
+        else:
+            pub_keys = load_jwks_from_url(client.public_key_url)
+            fetch = True
+
+        # Signature checked here
+        for key in pub_keys:
+            try:
+                payload = JWS().verify_compact(client_assertion, keys=[key])
+                key_str = key.key.export_key().decode('utf-8')
+                if key_str != cur_key:
+                    client.public_key = key_str
+                    client.save()
+                    logger.debug("Updated public key")
+                break
+            except (BadSignature, NoSuitableSigningKeys) as e:
+                if fetch:
+                    logger.debug("No valid keys: {}".format(e))
+                    raise TokenError('invalid_request')
+                else:
+                    logger.debug("Stored key didn't work; fetching new key")
+                    fetch = True
+        if payload:
+            break
+
+    _validate_jwt_payload(payload)
+
+
+def _validate_jwt_payload(payload):
+    """Validate JWT payload
+
+    - oauth bearer: https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12#section-3
+    - client auth: https://tools.ietf.org/html/draft-ietf-oauth-assertions-18#section-4.2
+    """
+    required = {'iss', 'sub', 'aud', 'jti', 'exp'}
+    for field in required:
+        if not payload.get(field):
+            raise TokenError('Missing JWT payload field: {}'.format(field))
+
+    # Specific requirements
     # https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12#section-3
-    # 3.1 - iss
-    if not res.get('iss', ''):
-        raise TokenError('JWT missing "iss" field: %s', res)
-    
-    # 3.2 - sub must == client_id. Checked because we already have a client
+    # 3.1 - iss - Checked above
+    # 3.2 - sub == client_id. Already checked b/c we have a client
     # 3.3 - aud
-    aud = res.get('aud', '')
-    site = settings.SITE_URL if settings.SITE_URL else 'http://{}'.format()
-    # TODO: Figure out better way to get current domain for comparison?
-    if not aud.startswith(site):
-        raise TokenError(
-            'JWT "aud" field: %s does not start with %s',
-            aud, settings.SITE_URL
-        )
-    exp = res.get('exp')
+
+    aud = payload.get('aud', '')
+    site_url = settings.get('SITE_URL')
+    if not aud.startswith(site_url):
+        raise TokenError('invalid_request')
+
     # 3.4 - exp
-    # TODO: Convert exp to real datetime
-    # make sure not expired
-    
+    exp = payload.get('exp')
+    if not exp or exp <= timezone.now().timestamp():
+        raise TokenError("invalid_request")
 
 
-def validate_secret_jwk(client_assertion, client, secret):
-    """Validate JWT for a client_secret_jwk according to OpenID Core, Section 9
+def validate_secret_jwt(client_assertion, client, secret):
+    """Validate JWT for a client_secret_jwt according to OpenID Core, Section 9
 
     https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
     """
-    # TODO: Finish This
+    # TODO: Needs to be implemented
     raise NotImplementedError
+    # Validate signature using shared secret
+    # _validate_jwt_payload(payload)
 
 
 def client_id_from_id_token(id_token):
