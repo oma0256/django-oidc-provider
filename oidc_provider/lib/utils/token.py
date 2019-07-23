@@ -128,7 +128,7 @@ def validate_private_jwt(client_assertion, client, request):
                 # Signature checked here
                 # Doing each key one at a time so we know which one succeeds
                 payload = JWS().verify_compact(client_assertion, keys=[key])
-                key_str = key.key.export_key().decode('utf-8')
+                key_str = key.key.exportKey().decode('utf-8')
                 if key_str != cur_key:
                     client.public_key = key_str
                     client.save()
