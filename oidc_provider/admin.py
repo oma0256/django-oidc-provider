@@ -59,7 +59,7 @@ class ClientForm(ModelForm):
 
     def clean(self):
         """Ensure pub_key present for private_key_jwt authentication"""
-        cleaned = super().clean()
+        cleaned = super(ClientForm, self).clean()
         auth_type = cleaned['auth_type']
         # Ensure SITE_URL set for jwt auth methods
 
