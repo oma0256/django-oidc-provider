@@ -172,7 +172,12 @@ def _validate_jwt_payload(payload, site_url):
 
     # 3.4 - exp
     exp = payload.get('exp')
-    if not exp or exp <= timezone.now().timestamp():
+    if not isinstance(int, exp):
+        logger.debug("[Token] exp should be an int: %s", exp)
+        raise TokenError("invalid_request", "exp should be an int: {}"
+                         .format(exp))
+
+    if exp <= int(time.time()):
         logger.debug("[Token] JWT expired or missing; exp: %s", exp)
         raise TokenError("invalid_request", "exp claim is expired or missing: {}"
                          .format(exp))
