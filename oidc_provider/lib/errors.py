@@ -151,9 +151,9 @@ class TokenError(Exception):
                          'or exceeds the scope granted by the resource owner',
     }
 
-    def __init__(self, error):
+    def __init__(self, error, desc=None):
         self.error = error
-        self.description = self._errors.get(error)
+        self.description = self._errors.get(error) if desc is None else desc
 
     def create_dict(self):
         dic = {
