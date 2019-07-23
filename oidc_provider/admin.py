@@ -2,11 +2,12 @@ from hashlib import sha224
 from random import randint
 from uuid import uuid4
 
-from django.forms import ModelForm
+from django.forms import ModelForm, ValidationError
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
-from oidc_provider.models import Client, Code, Token, RSAKey
+from oidc_provider.models import Client, Code, Token, RSAKey, AuthMethods
+from oidc_provider import settings
 
 
 class ClientForm(ModelForm):
@@ -45,6 +46,34 @@ class ClientForm(ModelForm):
 
         return secret
 
+    def clean_auth_type(self):
+        """Ensure SITE_URL is set if using jwt related auth method"""
+        auth_type = self.cleaned_data['auth_type']
+        if auth_type == AuthMethods.private_jwt or auth_type == AuthMethods.secret_jwt:
+            priv = AuthMethods.private_jwt.name
+            secret = AuthMethods.secret_jwt.name
+            if not settings.get('SITE_URL'):
+                raise ValidationError(
+                    'SITE_URL must be set to use {} or {}'.format(priv, secret))
+        return auth_type
+
+    def clean(self):
+        """Ensure pub_key present for private_key_jwt authentication"""
+        cleaned = super().clean()
+        auth_type = cleaned['auth_type']
+        # Ensure SITE_URL set for jwt auth methods
+
+        if auth_type == AuthMethods.private_jwt.value:
+            pub_key = cleaned.get('public_key', '')
+            pub_key_url = cleaned.get('public_key_url', '')
+            if not pub_key and not pub_key_url:
+                raise ValidationError(
+                    'When using Client Auth Type {}, Public Key or Public Key '
+                    'URL must be set'.format(
+                        dict(self.fields['auth_type'].choices)[auth_type]))
+        return cleaned
+
+
 
 @admin.register(Client)
 class ClientAdmin(admin.ModelAdmin):
@@ -53,7 +82,10 @@ class ClientAdmin(admin.ModelAdmin):
         [_(u''), {
             'fields': (
                 'name', 'owner', 'client_type', 'response_types', '_redirect_uris', 'jwt_alg',
-                'require_consent', 'reuse_consent', 'auth_type', 'public_key'),
+                'require_consent', 'reuse_consent'),
+        }],
+        [_(u'Authentication'), {
+            'fields': ('auth_type', 'public_key', 'public_key_url'),
         }],
         [_(u'Credentials'), {
             'fields': ('client_id', 'client_secret', '_scope'),

@@ -7,11 +7,12 @@ import json
 
 from django.db import models
 from django.utils import timezone
+from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
 
-class ClientAuthMethods(Enum):
+class AuthMethods(Enum):
     """Client Auth Methods
 
     https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
@@ -29,11 +30,11 @@ CLIENT_TYPE_CHOICES = [
 ]
 
 CLIENT_AUTH_METHOD_CHOICES = [
-    (ClientAuthMethods.secret_basic.value, 'Client Secret Basic'),
-    (ClientAuthMethods.secret_post.value, 'Client Secret Post'),
-    (ClientAuthMethods.secret_jwt.value, 'Client Secret JWT'),
-    (ClientAuthMethods.private_jwt.value, 'Private Key JWT'),
-    (ClientAuthMethods.none, 'None'),
+    (AuthMethods.secret_basic.value, 'Client Secret Basic'),
+    (AuthMethods.secret_post.value, 'Client Secret Post'),
+    (AuthMethods.secret_jwt.value, 'Client Secret JWT'),
+    (AuthMethods.private_jwt.value, 'Private Key JWT'),
+    (AuthMethods.none, 'None'),
 ]
 
 RESPONSE_TYPE_CHOICES = [
@@ -122,15 +123,18 @@ class Client(models.Model):
     auth_type = models.CharField(
         blank=True,
         max_length=30,
-        default=ClientAuthMethods.secret_basic,
+        default=AuthMethods.secret_basic,
         choices=CLIENT_AUTH_METHOD_CHOICES,
         verbose_name=_(u'Client Auth Type'),
-        help_text=_(''))
+        help_text=mark_safe(_(
+            'Client Authentication Type '
+            '(<a href="https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication">Info</a>)')))
     public_key = models.TextField(
         blank=True,
         default='',
         verbose_name=_(u'Public Key'),
-        help_text=_('Client public key, used for decrypting JWTs'))
+        help_text=_('Client public key (PEM format). Used for decrypting JWTs '
+                    'for Private Key JWT Auth'))
     public_key_url = models.URLField(
         blank=True,
         default='',
