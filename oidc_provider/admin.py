@@ -1,5 +1,6 @@
 from hashlib import sha224
 from random import randint
+from textwrap import wrap
 from uuid import uuid4
 
 from django.forms import ModelForm, ValidationError
@@ -7,7 +8,6 @@ from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
 
 from oidc_provider.models import Client, Code, Token, RSAKey, AuthMethods
-from oidc_provider import settings
 
 
 class ClientForm(ModelForm):
@@ -46,22 +46,35 @@ class ClientForm(ModelForm):
 
         return secret
 
-    def clean_auth_type(self):
-        """Ensure SITE_URL is set if using jwt related auth method"""
-        auth_type = self.cleaned_data['auth_type']
-        if auth_type == AuthMethods.private_jwt or auth_type == AuthMethods.secret_jwt:
-            priv = AuthMethods.private_jwt.name
-            secret = AuthMethods.secret_jwt.name
-            if not settings.get('SITE_URL'):
-                raise ValidationError(
-                    'SITE_URL must be set to use {} or {}'.format(priv, secret))
-        return auth_type
+    def clean_public_key(self):
+        """Ensure public_key is formatted correctly to be used by tools"""
+        key = self.cleaned_data['public_key'].strip()
+        if not key:
+            return key
+
+        if 'PRIVATE KEY' in key:
+            raise ValidationError('This field expects a PUBLIC KEY')
+
+        key = key.replace(' ', '').replace('\n', '')
+        begin = ('-----BEGINPUBLICKEY-----', '-----BEGIN PUBLIC KEY-----\n')
+        end = ('-----ENDPUBLICKEY-----', '\n-----END PUBLIC KEY-----')
+        if not key.startswith(begin[0]):
+            raise ValidationError(
+                'Public key must start with: -----BEGIN PUBLIC KEY-----'
+            )
+        if not key.endswith(end[0]):
+            raise ValidationError(
+                'Public key must end with: -----END PUBLIC KEY-----'
+            )
+        key = key.replace(begin[0], '').replace(end[0], '')
+        key = '\n'.join(wrap(key, 64))
+        key = "{}{}{}".format(begin[1], key, end[1])
+        return key
 
     def clean(self):
         """Ensure pub_key present for private_key_jwt authentication"""
         cleaned = super(ClientForm, self).clean()
         auth_type = cleaned['auth_type']
-        # Ensure SITE_URL set for jwt auth methods
 
         if auth_type == AuthMethods.private_jwt.value:
             pub_key = cleaned.get('public_key', '')
@@ -72,7 +85,6 @@ class ClientForm(ModelForm):
                     'URL must be set'.format(
                         dict(self.fields['auth_type'].choices)[auth_type]))
         return cleaned
-
 
 
 @admin.register(Client)
