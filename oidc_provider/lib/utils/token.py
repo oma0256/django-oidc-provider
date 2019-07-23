@@ -144,7 +144,7 @@ def validate_private_jwt(client_assertion, client, request):
         if payload:
             break
 
-    site_url = get_site_url(request)
+    site_url = get_site_url(request=request)
     _validate_jwt_payload(payload, site_url)
 
 
@@ -186,7 +186,7 @@ def validate_secret_jwt(client_assertion, client, secret, request):
     # TODO: Needs to be implemented
     raise NotImplementedError
     # Validate signature using shared secret
-    # site_url = get_site_url(request)
+    # site_url = get_site_url(request=request)
     # _validate_jwt_payload(payload, site_url)
 
 
