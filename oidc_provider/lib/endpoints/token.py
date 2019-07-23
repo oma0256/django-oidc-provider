@@ -68,20 +68,27 @@ class TokenEndpoint(object):
     def _validate_jwt_assertion(self):
         """Perform validation associated with JWT assertion"""
         if self.params['client_assertion_type'] != JWT_ASSERTION_TYPE:
-            raise TokenError('invalid_request')
+            logger.debug("[Token] Invalid assertion type: %s",
+                         self.params['client_assertion_type'])
+            raise TokenError('invalid_client', 'Invalid assertion type: {}'
+                             .format(self.params['client_assertion_type']))
 
         # match optional client_id if provided
         client_id = self.request.POST.get('client_id')
         if client_id and client_id != self.params['client_id']:
-            raise TokenError('invalid_request')
+            logger.debug("[Token] POST client_id != JWT sub: %s != %s",
+                         client_id, self.params['client_id'])
+            raise TokenError('invalid_request', 'sub claim must match client_id '
+                             'when optional client_id is provided in form POST')
 
-        # validate payload
+        # validate payload and signature
         if not self.params['client_secret']:
-            validate_private_jwt(self.params['client_assertion'], self.client)
+            validate_private_jwt(
+                self.params['client_assertion'], self.client, self.request)
         else:
             validate_secret_jwt(
                 self.params['client_assertion'], self.client,
-                self.params['client_secret'])
+                self.params['client_secret'], self.request)
 
     def validate_params(self):
         try:

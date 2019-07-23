@@ -1,4 +1,4 @@
-from datetime import timedelta, datetime
+from datetime import timedelta
 import logging
 import time
 import uuid
@@ -16,7 +16,11 @@ from jwkest.jws import (
 from jwkest.jwt import JWT
 
 from oidc_provider.lib.errors import TokenError
-from oidc_provider.lib.utils.common import get_issuer, run_processing_hook
+from oidc_provider.lib.utils.common import (
+    get_issuer,
+    run_processing_hook,
+    get_site_url
+)
 from oidc_provider.lib.claims import StandardScopeClaims
 from oidc_provider.models import (
     Code,
@@ -97,10 +101,15 @@ def decode_id_token(token, client):
     return JWS().verify_compact(token, keys=keys)
 
 
-def validate_private_jwt(client_assertion, client):
-    """Validate JWT signature and payload
+def validate_private_jwt(client_assertion, client, request):
+    """
+    Validate JWT according to OpenID Section 1.9, private_key_jwt
 
     https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
+
+    Tries public_key first then fetches new keys and tries those if it fails.
+    Updates public_key for later use if one succeds that doesn't match current
+    public_key.
     """
     fetch = False
     cur_key = client.public_key
@@ -114,9 +123,10 @@ def validate_private_jwt(client_assertion, client):
             pub_keys = load_jwks_from_url(client.public_key_url)
             fetch = True
 
-        # Signature checked here
         for key in pub_keys:
             try:
+                # Signature checked here
+                # Doing each key one at a time so we know which one succeeds
                 payload = JWS().verify_compact(client_assertion, keys=[key])
                 key_str = key.key.export_key().decode('utf-8')
                 if key_str != cur_key:
@@ -134,11 +144,12 @@ def validate_private_jwt(client_assertion, client):
         if payload:
             break
 
-    _validate_jwt_payload(payload)
+    site_url = get_site_url(request)
+    _validate_jwt_payload(payload, site_url)
 
 
-def _validate_jwt_payload(payload):
-    """Validate JWT payload
+def _validate_jwt_payload(payload, site_url):
+    """Validate JWT payload contents
 
     - oauth bearer: https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12#section-3
     - client auth: https://tools.ietf.org/html/draft-ietf-oauth-assertions-18#section-4.2
@@ -146,26 +157,28 @@ def _validate_jwt_payload(payload):
     required = {'iss', 'sub', 'aud', 'jti', 'exp'}
     for field in required:
         if not payload.get(field):
-            raise TokenError('Missing JWT payload field: {}'.format(field))
+            logger.debug('[Token] Missing JWT claim: %s', field)
+            raise TokenError('invalid_request', "Missing {} claim".format(field))
 
     # Specific requirements
     # https://tools.ietf.org/html/draft-ietf-oauth-jwt-bearer-12#section-3
     # 3.1 - iss - Checked above
     # 3.2 - sub == client_id. Already checked b/c we have a client
     # 3.3 - aud
-
     aud = payload.get('aud', '')
-    site_url = settings.get('SITE_URL')
     if not aud.startswith(site_url):
-        raise TokenError('invalid_request')
+        logger.debug("[Token] JWT 'aud' does not start with %s", site_url)
+        raise TokenError('invalid_request', "Invalid aud claim: {}".foramt(aud))
 
     # 3.4 - exp
     exp = payload.get('exp')
     if not exp or exp <= timezone.now().timestamp():
-        raise TokenError("invalid_request")
+        logger.debug("[Token] JWT expired or missing; exp: %s", exp)
+        raise TokenError("invalid_request", "exp claim is expired or missing: {}"
+                         .format(exp))
 
 
-def validate_secret_jwt(client_assertion, client, secret):
+def validate_secret_jwt(client_assertion, client, secret, request):
     """Validate JWT for a client_secret_jwt according to OpenID Core, Section 9
 
     https://openid.net/specs/openid-connect-core-1_0.html#ClientAuthentication
@@ -173,7 +186,8 @@ def validate_secret_jwt(client_assertion, client, secret):
     # TODO: Needs to be implemented
     raise NotImplementedError
     # Validate signature using shared secret
-    # _validate_jwt_payload(payload)
+    # site_url = get_site_url(request)
+    # _validate_jwt_payload(payload, site_url)
 
 
 def client_id_from_id_token(id_token):
