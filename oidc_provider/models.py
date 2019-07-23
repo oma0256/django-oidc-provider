@@ -123,7 +123,7 @@ class Client(models.Model):
     auth_type = models.CharField(
         blank=True,
         max_length=30,
-        default=AuthMethods.secret_basic,
+        default=AuthMethods.secret_basic.value,
         choices=CLIENT_AUTH_METHOD_CHOICES,
         verbose_name=_(u'Client Auth Type'),
         help_text=mark_safe(_(
