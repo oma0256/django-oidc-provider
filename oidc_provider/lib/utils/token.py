@@ -172,7 +172,7 @@ def _validate_jwt_payload(payload, site_url):
 
     # 3.4 - exp
     exp = payload.get('exp')
-    if not isinstance(int, exp):
+    if not isinstance(exp, int):
         logger.debug("[Token] exp should be an int: %s", exp)
         raise TokenError("invalid_request", "exp should be an int: {}"
                          .format(exp))
