@@ -79,6 +79,9 @@ class ClientForm(ModelForm):
         try:
             importKey(key)
         except Exception as e:
+            # TODO: catch specific errors and translate them into something
+            # more meaningful to the user
+            # Ex: 'Incorrect padding' - that doesn't mean anything to user
             raise ValidationError('Unable to process key: {}'.format(e))
 
         return key
@@ -86,6 +89,11 @@ class ClientForm(ModelForm):
     def clean(self):
         """Ensure pub_key present for private_key_jwt authentication"""
         cleaned = super(ClientForm, self).clean()
+
+        # Wait until all other errors are fixed before bothering with this
+        if self.errors:
+            return cleaned
+
         auth_type = cleaned['auth_type']
 
         if auth_type == AuthMethods.private_jwt.value:
