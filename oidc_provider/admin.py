@@ -3,6 +3,8 @@ from random import randint
 from textwrap import wrap
 from uuid import uuid4
 
+from Cryptodome.PublicKey.RSA import importKey
+
 from django.forms import ModelForm, ValidationError
 from django.contrib import admin
 from django.utils.translation import ugettext_lazy as _
@@ -49,15 +51,18 @@ class ClientForm(ModelForm):
     def clean_public_key(self):
         """Ensure public_key is formatted correctly to be used by tools"""
         key = self.cleaned_data['public_key'].strip()
+        # Empty is OK
         if not key:
             return key
 
         if 'PRIVATE KEY' in key:
             raise ValidationError('This field expects a PUBLIC KEY')
 
-        key = key.replace(' ', '').replace('\n', '')
         begin = ('-----BEGINPUBLICKEY-----', '-----BEGIN PUBLIC KEY-----\n')
         end = ('-----ENDPUBLICKEY-----', '\n-----END PUBLIC KEY-----')
+
+        # Remove all whitespace and newlines
+        key = "".join(key.split())
         if not key.startswith(begin[0]):
             raise ValidationError(
                 'Public key must start with: -----BEGIN PUBLIC KEY-----'
@@ -69,6 +74,13 @@ class ClientForm(ModelForm):
         key = key.replace(begin[0], '').replace(end[0], '')
         key = '\n'.join(wrap(key, 64))
         key = "{}{}{}".format(begin[1], key, end[1])
+
+        # Import key to make sure it will work later
+        try:
+            importKey(key)
+        except Exception as e:
+            raise ValidationError('Unable to process key: {}'.format(e))
+
         return key
 
     def clean(self):
