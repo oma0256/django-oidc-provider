@@ -153,4 +153,4 @@ class TokenAdmin(admin.ModelAdmin):
 @admin.register(RSAKey)
 class RSAKeyAdmin(admin.ModelAdmin):
 
-    readonly_fields = ['kid']
+    readonly_fields = ['kid', 'public_key']

@@ -11,6 +11,8 @@ from django.utils.safestring import mark_safe
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
 
+from Cryptodome.PublicKey.RSA import importKey
+
 
 class AuthMethods(Enum):
     """Client Auth Methods
@@ -307,3 +309,10 @@ class RSAKey(models.Model):
     @property
     def kid(self):
         return u'{0}'.format(md5(self.key.encode('utf-8')).hexdigest() if self.key else '')
+
+    @property
+    def public_key(self):
+        """Return the public key from the private key"""
+        key = importKey(self.key)
+        return key.publickey().exportKey()
+        
