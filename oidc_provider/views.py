@@ -10,10 +10,11 @@ except ImportError:
     from urllib.parse import urlsplit, parse_qs, urlunsplit, urlencode
 
 from Cryptodome.PublicKey import RSA
-from django.contrib.auth.views import (
-    redirect_to_login,
-    LogoutView,
-)
+from django.contrib.auth.views import redirect_to_login
+try:
+    from django.contrib.auth.views import LogoutView
+except ImportError:
+    from oidc_provider.compat import LogoutView
 try:
     from django.urls import reverse
 except ImportError:
