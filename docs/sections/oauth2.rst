@@ -13,7 +13,7 @@ Here we are going to protect a view with a scope called ``read_books``::
     from django.http import JsonResponse
     from django.views.decorators.http import require_http_methods
 
-    from oidc_provider.lib.utils.oauth2 import protected_resource_view
+    from oidc_provider_v2.lib.utils.oauth2 import protected_resource_view
 
 
     @require_http_methods(['GET'])

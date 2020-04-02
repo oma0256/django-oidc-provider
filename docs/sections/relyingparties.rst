@@ -46,7 +46,7 @@ For re-generating ``client_secret``, when you are in the Client editing view, se
 Custom view
 ===========
 
-If for some reason you need to create your own view to manage them, you can grab the form class that the admin makes use of. Located in ``oidc_provider.admin.ClientForm``.
+If for some reason you need to create your own view to manage them, you can grab the form class that the admin makes use of. Located in ``oidc_provider_v2.admin.ClientForm``.
 
 Some built-in logic that comes with it:
 
@@ -58,7 +58,7 @@ Programmatically
 
 You can create a Client programmatically with Django shell ``python manage.py shell``::
 
-    >>> from oidc_provider.models import Client, ResponseType
+    >>> from oidc_provider_v2.models import Client, ResponseType
     >>> c = Client(name='Some Client', client_id='123', client_secret='456', redirect_uris=['http://example.com/'])
     >>> c.save()
     >>> c.response_types.add(ResponseType.objects.get(value='code'))

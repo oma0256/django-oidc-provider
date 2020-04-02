@@ -46,10 +46,10 @@ How to populate standard claims
 
 Somewhere in your Django ``settings.py``::
 
-    OIDC_USERINFO = 'myproject.oidc_provider_settings.userinfo'
+    OIDC_USERINFO = 'myproject.oidc_provider_v2_settings.userinfo'
 
 
-Then inside your ``oidc_provider_settings.py`` file create the function for the ``OIDC_USERINFO`` setting::
+Then inside your ``oidc_provider_v2_settings.py`` file create the function for the ``OIDC_USERINFO`` setting::
 
     def userinfo(claims, user):
         # Populate claims dict.
@@ -69,21 +69,21 @@ Now test an Authorization Request using these scopes ``openid profile email`` an
 How to add custom scopes and claims
 ===================================
 
-The ``OIDC_EXTRA_SCOPE_CLAIMS`` setting is used to add extra scopes specific for your app. Is just a class that inherit from ``oidc_provider.lib.claims.ScopeClaims``. You can create or modify scopes by adding this methods into it:
+The ``OIDC_EXTRA_SCOPE_CLAIMS`` setting is used to add extra scopes specific for your app. Is just a class that inherit from ``oidc_provider_v2.lib.claims.ScopeClaims``. You can create or modify scopes by adding this methods into it:
 
 * ``info_scopename`` class property for setting the verbose name and description.
 * ``scope_scopename`` method for returning some information related.
 
-Let's say that you want add your custom ``foo`` scope for your OAuth2/OpenID provider. So when a client (RP) makes an Authorization Request containing ``foo`` in the list of scopes, it will be listed in the consent page (``templates/oidc_provider/authorize.html``) and then some specific claims like ``bar`` will be returned from the ``/userinfo`` response.
+Let's say that you want add your custom ``foo`` scope for your OAuth2/OpenID provider. So when a client (RP) makes an Authorization Request containing ``foo`` in the list of scopes, it will be listed in the consent page (``templates/oidc_provider_v2/authorize.html``) and then some specific claims like ``bar`` will be returned from the ``/userinfo`` response.
 
 Somewhere in your Django ``settings.py``::
 
-    OIDC_EXTRA_SCOPE_CLAIMS = 'yourproject.oidc_provider_settings.CustomScopeClaims'
+    OIDC_EXTRA_SCOPE_CLAIMS = 'yourproject.oidc_provider_v2_settings.CustomScopeClaims'
 
-Inside your oidc_provider_settings.py file add the following class::
+Inside your oidc_provider_v2_settings.py file add the following class::
 
     from django.utils.translation import ugettext as _
-    from oidc_provider.lib.claims import ScopeClaims
+    from oidc_provider_v2.lib.claims import ScopeClaims
 
     class CustomScopeClaims(ScopeClaims):
 

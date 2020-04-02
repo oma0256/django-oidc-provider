@@ -21,7 +21,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'app',
-    'oidc_provider',
+    'oidc_provider_v2',
 ]
 
 MIDDLEWARE_CLASSES = [
@@ -31,7 +31,7 @@ MIDDLEWARE_CLASSES = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'oidc_provider.middleware.SessionManagementMiddleware',
+    'oidc_provider_v2.middleware.SessionManagementMiddleware',
 ]
 MIDDLEWARE = MIDDLEWARE_CLASSES
 

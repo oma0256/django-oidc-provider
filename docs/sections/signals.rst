@@ -9,7 +9,7 @@ For example::
 
     from django.dispatch import receiver
 
-    from oidc_provider.signals import user_decline_consent
+    from oidc_provider_v2.signals import user_decline_consent
 
 
     @receiver(user_decline_consent)

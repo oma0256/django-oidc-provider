@@ -27,7 +27,7 @@ Add it to your apps in your project's django settings::
         'django.contrib.sessions',
         'django.contrib.messages',
         'django.contrib.staticfiles',
-        'oidc_provider',
+        'oidc_provider_v2',
         # ...
     )
 
@@ -35,7 +35,7 @@ Include our urls to your project's ``urls.py``::
 
     urlpatterns = patterns('',
         # ...
-        url(r'^openid/', include('oidc_provider.urls', namespace='oidc_provider')),
+        url(r'^openid/', include('oidc_provider_v2.urls', namespace='oidc_provider_v2')),
         # ...
     )
 

@@ -13,7 +13,7 @@ Somewhere in your Django ``settings.py``::
 
     MIDDLEWARE_CLASSES = [
         ...
-        'oidc_provider.middleware.SessionManagementMiddleware',
+        'oidc_provider_v2.middleware.SessionManagementMiddleware',
     ]
 
     OIDC_SESSION_MANAGEMENT_ENABLE = True

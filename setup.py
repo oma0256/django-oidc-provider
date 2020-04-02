@@ -5,14 +5,14 @@ from setuptools import (
 )
 
 version = {}
-with open("./oidc_provider/version.py") as fp:
+with open("./oidc_provider_v2/version.py") as fp:
     exec(fp.read(), version)
 
 # allow setup.py to be run from any path
 os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
-    name='django-oidc-provider',
+    name='django-oidc-provider-v2',
     version=version['__version__'],
     packages=find_packages(),
     include_package_data=True,

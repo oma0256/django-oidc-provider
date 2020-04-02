@@ -3,7 +3,7 @@
 Templates
 #########
 
-Add your own templates files inside a folder named ``templates/oidc_provider/``.
+Add your own templates files inside a folder named ``templates/oidc_provider_v2/``.
 You can copy the sample html files here and customize them with your own style.
 
 **authorize.html**::
@@ -12,7 +12,7 @@ You can copy the sample html files here and customize them with your own style.
 
     <p>Client <strong>{{ client.name }}</strong> would like to access this information of you ...</p>
 
-    <form method="post" action="{% url 'oidc_provider:authorize' %}">
+    <form method="post" action="{% url 'oidc_provider_v2:authorize' %}">
 
         {% csrf_token %}
 

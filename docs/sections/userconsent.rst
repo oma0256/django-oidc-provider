@@ -5,7 +5,7 @@ User Consent
 
 The package store some information after the user grant access to some client. For example, you can use the ``UserConsent`` model to list applications that the user have authorized access. Like Google does `here <https://security.google.com/settings/security/permissions>`_.
 
-    >>> from oidc_provider.models import UserConsent
+    >>> from oidc_provider_v2.models import UserConsent
     >>> UserConsent.objects.filter(user__email='some@email.com')
     [<UserConsent: Example Client - some@email.com>]
 

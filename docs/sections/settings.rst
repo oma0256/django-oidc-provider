@@ -58,7 +58,7 @@ Expressed in seconds. Default is ``60*10``.
 OIDC_EXTRA_SCOPE_CLAIMS
 =======================
 
-OPTIONAL. ``str``. A string with the location of your class. Default is ``oidc_provider.lib.claims.ScopeClaims``.
+OPTIONAL. ``str``. A string with the location of your class. Default is ``oidc_provider_v2.lib.claims.ScopeClaims``.
 
 Used to add extra scopes specific for your app. OpenID Connect RP's will use scope values to specify what access privileges are being requested for Access Tokens.
 
@@ -227,8 +227,8 @@ OPTIONAL. A dictionary pointing to templates for authorize and error pages.
 Default is::
 
     {
-        'authorize': 'oidc_provider/authorize.html',
-        'error': 'oidc_provider/error.html'
+        'authorize': 'oidc_provider_v2/authorize.html',
+        'error': 'oidc_provider_v2/error.html'
     }
 
 See the :ref:`templates` section.
