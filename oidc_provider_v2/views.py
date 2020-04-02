@@ -171,6 +171,10 @@ class AuthorizeView(View):
                 'error': error.error,
                 'description': error.description,
             }
+            logger.info(str(error))
+            logger.info(error.error)
+            logger.info(error.description)
+            logger.info(context)
 
             return render(request, OIDC_TEMPLATES['error'], context)
 
