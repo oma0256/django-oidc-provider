@@ -67,7 +67,7 @@ class AuthorizeView(View):
     def get(self, request, *args, **kwargs):
         authorize = self.authorize_endpoint_class(request)
         logger.info('authorize....................')
-        logger.info(authorize.is_authenticated)
+        # logger.info(authorize.is_authenticated)
         logger.info('cookies....................')
         logger.info(request.COOKIES)
 
