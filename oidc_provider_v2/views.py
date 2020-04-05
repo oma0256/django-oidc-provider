@@ -71,6 +71,10 @@ class AuthorizeView(View):
 
         try:
             authorize.validate_params()
+            logger.info('authorize.validate_params()....................')
+            logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
+            logger.info(dict(request.user))
+            logger.info(request.user.is_authenticated)
 
             if get_attr_or_callable(request.user, 'is_authenticated'):
                 # Check if there's a hook setted.
@@ -182,6 +186,7 @@ class AuthorizeView(View):
 
         except AuthorizeError as error:
             logger.info('AuthorizeError.................')
+            logger.info(error)
             logger.info(str(error))
             uri = error.create_uri(
                 authorize.params['redirect_uri'],
