@@ -66,6 +66,8 @@ class AuthorizeView(View):
 
     def get(self, request, *args, **kwargs):
         authorize = self.authorize_endpoint_class(request)
+        logger.info('authorize....................')
+        logger.info(authorize.is_authentication)
 
         try:
             authorize.validate_params()
@@ -179,9 +181,12 @@ class AuthorizeView(View):
             return render(request, OIDC_TEMPLATES['error'], context)
 
         except AuthorizeError as error:
+            logger.info('AuthorizeError.................')
+            logger.info(str(error))
             uri = error.create_uri(
                 authorize.params['redirect_uri'],
                 authorize.params['state'])
+            logger.info(uri)
 
             if authorize.params['response_mode'] == 'form_post':
                 return render(
