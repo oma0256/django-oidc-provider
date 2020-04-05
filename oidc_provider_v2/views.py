@@ -68,6 +68,8 @@ class AuthorizeView(View):
         authorize = self.authorize_endpoint_class(request)
         logger.info('authorize....................')
         logger.info(authorize.is_authenticated)
+        logger.info('cookies....................')
+        logger.info(request.COOKIES)
 
         try:
             authorize.validate_params()
