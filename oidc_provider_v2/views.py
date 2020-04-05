@@ -67,13 +67,13 @@ class AuthorizeView(View):
     def get(self, request, *args, **kwargs):
         authorize = self.authorize_endpoint_class(request)
         logger.info('authorize....................')
-        logger.info(authorize.is_authentication)
+        logger.info(authorize.is_authenticated)
 
         try:
             authorize.validate_params()
             logger.info('authorize.validate_params()....................')
             logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
-            logger.info(dict(request.user))
+            # logger.info(dict(request.user))
             logger.info(request.user.is_authenticated)
 
             if get_attr_or_callable(request.user, 'is_authenticated'):
