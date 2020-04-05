@@ -69,7 +69,9 @@ class AuthorizeView(View):
         logger.info('authorize....................')
         # logger.info(authorize.is_authenticated)
         logger.info('cookies....................')
-        # logger.info(request.COOKIES)
+        logger.info(request.COOKIES)
+        logger.info("request.user.is_authenticated................")
+        logger.info(request.user.is_authenticated)
 
         try:
             authorize.validate_params()
