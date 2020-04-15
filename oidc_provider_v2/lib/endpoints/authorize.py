@@ -11,6 +11,7 @@ except ImportError:
     from urllib.parse import urlsplit, parse_qs, urlunsplit, urlencode
 from uuid import uuid4
 
+from django.conf import settings
 from django.utils import timezone
 
 from oidc_provider_v2.lib.claims import StandardScopeClaims
@@ -93,13 +94,15 @@ class AuthorizeEndpoint(object):
             logger.debug('[Authorize] Invalid client identifier: %s', self.params['client_id'])
             raise ClientIdError()
 
-        # Redirect URI validation.
-        if self.is_authentication and not self.params['redirect_uri']:
-            logger.debug('[Authorize] Missing redirect uri.')
-            raise RedirectUriError()
-        if not (self.params['redirect_uri'] in self.client.redirect_uris):
-            logger.debug('[Authorize] Invalid redirect uri: %s', self.params['redirect_uri'])
-            raise RedirectUriError()
+        REDIRECT_URI_VALIDATION = getattr(settings, 'REDIRECT_URI_VALIDATION', False)
+        if REDIRECT_URI_VALIDATION is True:
+            # Redirect URI validation.
+            if self.is_authentication and not self.params['redirect_uri']:
+                logger.debug('[Authorize] Missing redirect uri.')
+                raise RedirectUriError()
+            if not (self.params['redirect_uri'] in self.client.redirect_uris):
+                logger.debug('[Authorize] Invalid redirect uri: %s', self.params['redirect_uri'])
+                raise RedirectUriError()
 
         # Grant type validation.
         if not self.grant_type:

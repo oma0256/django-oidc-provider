@@ -65,23 +65,13 @@ class AuthorizeView(View):
     authorize_endpoint_class = AuthorizeEndpoint
 
     def get(self, request, *args, **kwargs):
-        logger.info("request.user.is_authenticated................")
-        logger.info(request.user.is_authenticated)
         authorize = self.authorize_endpoint_class(request)
         logger.info('authorize....................')
-        # logger.info(authorize.is_authenticated)
-        logger.info('cookies....................')
-        logger.info(request.COOKIES)
         logger.info("request.user.is_authenticated................")
         logger.info(request.user.is_authenticated)
 
         try:
             authorize.validate_params()
-            logger.info('authorize.validate_params()....................')
-            logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
-            # logger.info(dict(request.user))
-            logger.info(request.user.is_authenticated)
-
             if get_attr_or_callable(request.user, 'is_authenticated'):
                 # Check if there's a hook setted.
                 hook_resp = settings.get('OIDC_AFTER_USERLOGIN_HOOK', import_str=True)(
