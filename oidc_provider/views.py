@@ -65,6 +65,13 @@ class AuthorizeView(View):
     authorize_endpoint_class = AuthorizeEndpoint
 
     def get(self, request, *args, **kwargs):
+        logger.info('AuthorizeView................')
+        print(request.GET)
+        logger.info(request.user.id)
+        logger.info(request.user.is_authenticated)
+        print('AuthorizeView................')
+        print(request.user.id)
+        print(request.user.is_authenticated)
         authorize = self.authorize_endpoint_class(request)
 
         try:
