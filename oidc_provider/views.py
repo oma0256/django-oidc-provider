@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -18,7 +19,8 @@ try:
     from django.urls import reverse
 except ImportError:
     from django.core.urlresolvers import reverse
-from django.contrib.auth import logout as django_user_logout
+from django.contrib.auth import logout as django_user_logout, login
+from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -52,6 +54,7 @@ from oidc_provider.models import (
     Client,
     RSAKey,
     ResponseType)
+from oidc_provider.utils import fernet_decode_text, parse_lti_message_hint
 from oidc_provider import settings
 from oidc_provider import signals
 
@@ -65,9 +68,64 @@ class AuthorizeView(View):
     authorize_endpoint_class = AuthorizeEndpoint
 
     def get(self, request, *args, **kwargs):
+        logger.info('AuthorizeView.................')
         authorize = self.authorize_endpoint_class(request)
 
         try:
+            params = request.GET
+            logger.info('params.....................')
+            logger.info(params)
+            logger.info('lti_message_hint' not in params)
+            logger.info(params['lti_message_hint'])
+            logger.info('user_id' not in params['lti_message_hint'])
+            if 'lti_message_hint' not in params or 'user_id' not in params['lti_message_hint']:
+                raise AuthorizeError(
+                    authorize.params['redirect_uri'], 'login_required',
+                    authorize.grant_type
+                )
+            lti_message_hint = params['lti_message_hint']
+            logger.info('lti_message_hint.....................')
+            logger.info(lti_message_hint)
+            encoded_user_id = lti_message_hint.split('&user_id=')[-1]
+            logger.info('encoded_user_id.....................')
+            logger.info(encoded_user_id)
+            logger.info(urllib.unquote(encoded_user_id))
+            try:
+                usage_id, _ = parse_lti_message_hint(lti_message_hint)
+                logger.info('usage_id.....................')
+                logger.info(usage_id)
+                decoded_user_id = urllib.unquote(encoded_user_id)
+                user_id = fernet_decode_text(decoded_user_id, usage_id)
+                logger.info('user_id.....................')
+                logger.info(user_id)
+            except Exception as error:
+                logger.info(str(error))
+                raise AuthorizeError(
+                    authorize.params['redirect_uri'], 'login_required',
+                    authorize.grant_type
+                )
+
+            logger.info('Checking if loggedin.......................')
+            logger.info(request.user.is_authenticated)
+            logger.info(request.user.id)
+            logger.info(request.user.username)
+            logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
+            logger.info(not get_attr_or_callable(request.user, 'is_authenticated'))
+            logger.info(not get_attr_or_callable(request.user, 'is_authenticated') or int(request.user.id) != int(user_id))
+            if not get_attr_or_callable(request.user, 'is_authenticated') or int(request.user.id) != int(user_id):
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    raise AuthorizeError(
+                        authorize.params['redirect_uri'], 'login_required',
+                        authorize.grant_type
+                    )
+                logger.info(user)
+                logger.info('Login............................')
+                logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
+                login(request, user, backend='openedx.core.djangoapps.oauth_dispatch.dot_overrides.backends.EdxRateLimitedAllowAllUsersModelBackend')
+                logger.info(get_attr_or_callable(request.user, 'is_authenticated'))
+
             authorize.validate_params()
 
             if get_attr_or_callable(request.user, 'is_authenticated'):
