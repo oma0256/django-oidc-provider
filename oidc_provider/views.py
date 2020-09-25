@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 from django.views.decorators.csrf import csrf_exempt
 
@@ -18,7 +19,8 @@ try:
     from django.urls import reverse
 except ImportError:
     from django.core.urlresolvers import reverse
-from django.contrib.auth import logout as django_user_logout
+from django.contrib.auth import logout as django_user_logout, login
+from django.contrib.auth.models import User
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.template.loader import render_to_string
@@ -55,6 +57,9 @@ from oidc_provider.models import (
 from oidc_provider import settings
 from oidc_provider import signals
 
+from ibl_lti_cryptography_app.utils import fernet_decode_text
+
+from .utils import parse_lti_message_hint
 
 logger = logging.getLogger(__name__)
 
@@ -68,6 +73,35 @@ class AuthorizeView(View):
         authorize = self.authorize_endpoint_class(request)
 
         try:
+            params = request.GET
+            if 'lti_message_hint' not in params or 'user_id' not in params['lti_message_hint']:
+                raise AuthorizeError(
+                    authorize.params['redirect_uri'], 'login_required',
+                    authorize.grant_type
+                )
+            lti_message_hint = params['lti_message_hint']
+            encoded_user_id = lti_message_hint.split('&user_id=')[-1]
+            try:
+                usage_id, _ = parse_lti_message_hint(lti_message_hint)
+                decoded_user_id = urllib.unquote(encoded_user_id)
+                user_id = fernet_decode_text(decoded_user_id, usage_id)
+            except Exception as error:
+                logger.info(str(error))
+                raise AuthorizeError(
+                    authorize.params['redirect_uri'], 'login_required',
+                    authorize.grant_type
+                )
+
+            if not get_attr_or_callable(request.user, 'is_authenticated') or int(request.user.id) != int(user_id):
+                try:
+                    user = User.objects.get(id=user_id)
+                except User.DoesNotExist:
+                    raise AuthorizeError(
+                        authorize.params['redirect_uri'], 'login_required',
+                        authorize.grant_type
+                    )
+                login(request, user, backend='openedx.core.djangoapps.oauth_dispatch.dot_overrides.backends.EdxRateLimitedAllowAllUsersModelBackend')
+
             authorize.validate_params()
 
             if get_attr_or_callable(request.user, 'is_authenticated'):
