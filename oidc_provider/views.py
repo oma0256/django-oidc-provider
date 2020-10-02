@@ -65,6 +65,7 @@ class AuthorizeView(View):
     authorize_endpoint_class = AuthorizeEndpoint
 
     def get(self, request, *args, **kwargs):
+        logger.info('get AuthorizeView.............................')
         authorize = self.authorize_endpoint_class(request)
 
         try:
@@ -188,6 +189,7 @@ class AuthorizeView(View):
             return redirect(uri)
 
     def post(self, request, *args, **kwargs):
+        logger.info('post AuthorizeView.............................')
         authorize = AuthorizeEndpoint(request)
 
         try:
@@ -215,7 +217,7 @@ class AuthorizeView(View):
                     request,
                     OIDC_TEMPLATES['form_post'],
                     authorize.get_form_post_context(uri))
-
+            logger.info(uri)
             return redirect(uri)
 
         except AuthorizeError as error:
@@ -234,12 +236,15 @@ class AuthorizeView(View):
 
 class TokenView(View):
     def post(self, request, *args, **kwargs):
+        logger.info('post TokenView................')
         token = TokenEndpoint(request)
+        logger.info(token)
 
         try:
             token.validate_params()
 
             dic = token.create_response_dic()
+            logger.info(dic)
 
             return TokenEndpoint.response(dic)
 
